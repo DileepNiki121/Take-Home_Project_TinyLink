@@ -4,7 +4,7 @@ const router = express.Router();
 const db = require("../db");   // PostgreSQL connection
 
 // REGEX to validate short code (6–8 characters)
-const CODE_RE = /^[A-Za-z0-9]{6,8}$/;
+const CODE_RE = /^[A-Za-z0-9]{6,10}$/;
 
 // Validate URL using built-in URL class
 function isValidUrl(url) {
