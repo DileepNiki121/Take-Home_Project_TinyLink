@@ -1,51 +1,81 @@
-// db.js (fixed)
-// Load dotenv from the same folder as this file (robust on Windows/OneDrive)
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+// db.js
+//
+// This file creates and exports a PostgreSQL connection pool.
+// It uses environment variables so it works in BOTH:
+//   1. Local development (localhost PostgreSQL or Neon)
+//   2. Render deployment (Neon remote DB with SSL)
+// ----------------------------------------------------------
 
 const { Pool } = require('pg');
+require('dotenv').config();     // Load .env (local) — ignored in Render
 
-// --- Read config from environment (use DB_PASSWORD, not DB_PASS) ---
-const user = process.env.DB_USER || 'postgres';
-const passwordEnv = process.env.DB_PASSWORD;           // <-- correct variable name
-const host = process.env.DB_HOST || '127.0.0.1';
-const port = process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432;
-const database = process.env.DB_NAME || 'Tinylink_db';
+// -------------------------------
+//  ENVIRONMENT VARIABLES
+// -------------------------------
+//
+// These MUST be set in Render’s Environment tab:
+//   DB_HOST       = your Neon host
+//   DB_PORT       = 5432
+//   DB_USER       = neondb_owner
+//   DB_PASSWORD   = your actual Neon password
+//   DB_NAME       = neondb
+//
+// Locally, these come from your .env file.
 
-// --- Safety check: require a non-empty password so pg won't throw SCRAM error ---
-if (!passwordEnv || passwordEnv.trim() === '') {
-  console.error('\n✖ ERROR: DB_PASSWORD is not set in .env or is empty.');
-  console.error('Please add DB_PASSWORD=your_postgres_password to your .env and restart the server.\n');
-  // Exit early to avoid confusing SCRAM errors. Remove this line if you prefer to continue without exiting.
-  process.exit(1);
-}
-const password = String(passwordEnv);
+const user = process.env.DB_USER;                                      // DB username
+const password = process.env.DB_PASSWORD || process.env.DB_PASS;       // DB password
+const host = process.env.DB_HOST;                                      // DB hostname
+const port = Number(process.env.DB_PORT || 5432);                      // DB port
+const database = process.env.DB_NAME;                                  // DB name
 
-// --- SSL configuration (simple and correct) ---
-const isRender = process.env.DB_HOST && process.env.DB_HOST !== '127.0.0.1' && process.env.DB_HOST !== 'localhost';
-const sslConfig = isRender ? { rejectUnauthorized: false } : false;
+// ----------------------------------------
+// DETECT IF WE SHOULD USE SSL (NEON DB)
+// ----------------------------------------
+//
+// Neon (remote server) requires SSL.
+// Localhost does NOT.
+//
+// If DB_HOST is not localhost → use SSL.
 
-console.log('DB Connection Status:', isRender ? 'Using Remote Host (SSL Required)' : 'Using Local Host');
+const usingLocalHost =
+  host === '127.0.0.1' ||
+  host === 'localhost' ||
+  host === undefined ||
+  host === null;
 
-const pool = new Pool({
+const poolConfig = {
   user,
   password,
   host,
   port,
   database,
-  ssl: sslConfig,
-});
+  ssl: usingLocalHost
+    ? false                                // Local mode → NO SSL
+    : { rejectUnauthorized: false }        // Render + Neon → SSL REQUIRED
+};
 
-// Optional: test a connection and print a helpful message
-pool.connect()
-  .then(client => {
-    client.release();
-    console.log('DB Connection: OK');
-  })
-  .catch(err => {
-    console.error('DB Connection Error:', err.message || err);
-  });
+// Create the connection pool
+const pool = new Pool(poolConfig);
 
+// ----------------------------------------
+// OPTIONAL: Debug output
+// ----------------------------------------
+console.log('--------------------------------');
+console.log('DATABASE CONNECTION SETTINGS:');
+console.log(`HOST      : ${host}`);
+console.log(`DATABASE  : ${database}`);
+console.log(`USER      : ${user}`);
+console.log(`SSL MODE  : ${usingLocalHost ? 'LOCAL (no SSL)' : 'NEON (SSL enabled)'}`);
+console.log('--------------------------------');
+
+// ----------------------------------------
+// EXPORT QUERY FUNCTION
+// ----------------------------------------
+//
+// Use db.query(sql, params) anywhere in your app.
+// Example:
+//    const result = await db.query('SELECT * FROM links');
+//
 module.exports = {
   query: (text, params) => pool.query(text, params),
   pool
