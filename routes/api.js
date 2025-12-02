@@ -3,10 +3,22 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");   // PostgreSQL connection
 
-// REGEX to validate short code (6–8 characters)
-const CODE_RE = /^[A-Za-z0-9]{6,8}$/;
+/* ===========================================================
+   SHORT CODE VALIDATION RULES
+   Allowed characters:
+   ✔ A–Z
+   ✔ a–z
+   ✔ 0–9
+   ✔ Space
+   ✔ @  _  +  =  -  .  $  %  &  !
+   ❌ NO < or > so HTML tags like <script> cannot pass
+   Length: 6–12 characters
+   =========================================================== */
+const CODE_RE = /^[A-Za-z0-9_@+=\-.$%&! ]{6,30}$/;
 
-// Validate URL using built-in URL class
+/* ===========================================================
+   URL VALIDATION
+   =========================================================== */
 function isValidUrl(url) {
   try {
     const u = new URL(url);
@@ -17,11 +29,11 @@ function isValidUrl(url) {
 }
 
 /* ===========================================================
-   ROUTE: Create Link (CHANGED TO PUT)
+   ROUTE: Create Link (PUT)
    PUT /api/links
-   Body: { target_url: "...", code?: "..." }
+   Body: { "target_url": "...", "code": "optional" }
    =========================================================== */
-router.put("/links", async (req, res) => { // <-- CHANGED from router.post
+router.put("/links", async (req, res) => {
   const { target_url, code } = req.body;
 
   // Validate URL
@@ -31,11 +43,14 @@ router.put("/links", async (req, res) => { // <-- CHANGED from router.post
 
   // Validate custom code (optional)
   if (code && !CODE_RE.test(code)) {
-    return res.status(400).json({ error: "Code must be 6–8 alphanumeric" });
+    return res.status(400).json({
+      error:
+        "Code must be 6–30 characters (letters, numbers, space, @ _ + = - . $ % & ! allowed; HTML tags not allowed)"
+    });
   }
 
   try {
-    // If user provides custom code → check if it exists
+    // If custom code is provided → check if already exists
     if (code) {
       const exists = await db.query(
         "SELECT 1 FROM links WHERE code=$1 LIMIT 1",
@@ -46,7 +61,7 @@ router.put("/links", async (req, res) => { // <-- CHANGED from router.post
         return res.status(409).json({ error: "Code already exists" });
       }
 
-      // Insert new link with custom code
+      // Insert with custom code
       const r = await db.query(
         `INSERT INTO links (code, target_url)
          VALUES ($1, $2)
@@ -58,7 +73,7 @@ router.put("/links", async (req, res) => { // <-- CHANGED from router.post
     }
 
     /* ======================================================
-       Auto-generate short code (6 chars)
+       AUTO-GENERATE CODE (6 chars)
        ====================================================== */
     const chars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -70,7 +85,7 @@ router.put("/links", async (req, res) => { // <-- CHANGED from router.post
         return chars[Math.floor(Math.random() * chars.length)];
       }).join("");
 
-      // Ensure no collision
+      // Check collision
       const exists = await db.query(
         "SELECT 1 FROM links WHERE code=$1 LIMIT 1",
         [newCode]
@@ -113,12 +128,13 @@ router.get("/links", async (req, res) => {
 });
 
 /* ===========================================================
-   ROUTE: Get Stats for a Link
+   ROUTE: Get Stats for a Single Link
    GET /api/links/:code
    =========================================================== */
 router.get("/links/:code", async (req, res) => {
   const { code } = req.params;
 
+  // Validate URL code format
   if (!CODE_RE.test(code)) {
     return res.status(400).json({ error: "Invalid code format" });
   }
@@ -126,7 +142,8 @@ router.get("/links/:code", async (req, res) => {
   try {
     const r = await db.query(
       `SELECT code, target_url, total_clicks, last_clicked, created_at
-       FROM links WHERE code=$1`,
+       FROM links
+       WHERE code=$1`,
       [code]
     );
 
@@ -148,6 +165,7 @@ router.get("/links/:code", async (req, res) => {
 router.delete("/links/:code", async (req, res) => {
   const { code } = req.params;
 
+  // Validate code
   if (!CODE_RE.test(code)) {
     return res.status(400).json({ error: "Invalid code format" });
   }
@@ -162,7 +180,7 @@ router.delete("/links/:code", async (req, res) => {
       return res.status(404).json({ error: "Link not found" });
     }
 
-    return res.status(204).send(); // 204 No Content (successful deletion)
+    return res.status(204).send();
   } catch (err) {
     console.error("Error deleting link:", err);
     return res.status(500).json({ error: "Server error" });
@@ -170,13 +188,11 @@ router.delete("/links/:code", async (req, res) => {
 });
 
 /* ===========================================================
-   ROUTE: Health Check (Required by Assignment)
-   GET /api/healthz 
+   ROUTE: Health Check
+   GET /api/healthz
    =========================================================== */
 router.get("/healthz", (req, res) => {
-  // Returns a simple 200 OK status
   return res.json({ ok: true, version: "1.0" });
 });
-
 
 module.exports = router;

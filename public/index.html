@@ -1,49 +1,156 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>TinyLink — Dashboard</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+  <!-- Tailwind CDN (quick) -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Small custom styles for nicer look -->
+  <style>
+    /* Soft page background gradient */
+    body {
+      background: linear-gradient(180deg, #f6fbff 0%, #fafafa 60%);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Nice container width */
+    .page {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 24px;
+    }
+
+    /* Card look */
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), #ffffff);
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(20,40,80,0.06);
+      padding: 20px;
+    }
+
+    /* Accent button / gradient */
+    .btn-accent {
+      background: linear-gradient(90deg,#2b7cff,#4f6fff);
+      color: white;
+      box-shadow: 0 8px 18px rgba(47,84,255,0.18);
+    }
+
+    .btn-accent:active { transform: translateY(1px); }
+
+    /* Soft input */
+    input[type="text"], input[type="url"] {
+      border-radius: 10px;
+      border: 1px solid rgba(15,23,42,0.06);
+      background: #fbfdff;
+      padding: 10px 12px;
+    }
+
+    /* Table header / rows */
+    thead th { color: #374151; font-weight: 700; font-size: 0.95rem; }
+    tbody td { color: #374151; font-size: 0.95rem; }
+
+    /* Small green success text */
+    .muted-success { color: #0f9d58; font-weight: 600; }
+
+    /* Tag */
+    .server-tag {
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid rgba(15,23,42,0.06);
+      font-weight:600;
+      color:#374151;
+    }
+
+    /* Tiny footer */
+    footer { text-align:center; color:#9aa4b2; font-size:0.9rem; padding:18px 0; }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-  <div class="max-w-4xl mx-auto p-6">
-    <header class="mb-6">
-      <h1 class="text-3xl font-bold">TinyLink — Dashboard</h1>
-      <p class="text-sm text-gray-600">Create short links, view stats, delete links</p>
+<body>
+  <div class="page">
+    <header class="flex items-start justify-between mb-6">
+      <div>
+        <h1 class="text-4xl font-extrabold text-slate-900">TinyLink — Dashboard</h1>
+        <p class="mt-2 text-slate-600">Create short links, view stats, and manage links with analytics.</p>
+      </div>
+
+      <div class="text-right">
+        <div class="server-tag">Server: <span class="font-semibold">Localhost</span></div>
+        <div class="mt-3 flex gap-2 justify-end">
+          <button id="importBtn" class="px-4 py-2 border rounded-md bg-white">Import CSV</button>
+          <button id="newLinkBtn" class="px-4 py-2 btn-accent rounded-md">New Link</button>
+        </div>
+      </div>
     </header>
 
-    <section class="mb-6 bg-white p-4 rounded shadow">
-      <form id="createForm" class="flex gap-2 flex-col md:flex-row">
-        <input id="target_url" placeholder="https://example.com/long-url" class="flex-1 p-2 border rounded" />
-        <input id="custom_code" placeholder="Optional code (6-8 alnum)" class="w-48 p-2 border rounded" />
-        <button id="createBtn" class="px-4 py-2 bg-blue-600 text-white rounded">Create</button>
+    <!-- CREATE FORM CARD -->
+    <section class="card mb-6">
+      <form id="createForm" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        <div class="md:col-span-7">
+          <label class="block text-sm text-slate-600 mb-2">Target URL</label>
+          <input id="target_url" type="url" placeholder="https://example.com/long-url" class="w-full" />
+        </div>
+
+        <div class="md:col-span-3">
+          <label class="block text-sm text-slate-600 mb-2">Optional code</label>
+          <input id="custom_code" type="text" placeholder="6–30 alphanumeric" class="w-full" />
+        </div>
+
+        <div class="md:col-span-2 flex gap-3">
+          <button id="createBtn" class="btn-accent px-6 py-3 rounded-md">Create</button>
+          <button id="clearBtn" type="button" class="px-4 py-3 border rounded-md bg-white">Clear</button>
+        </div>
+
+        <div class="md:col-span-12 mt-2">
+          <div id="createMsg" class="text-sm"></div>
+          <p class="text-xs text-slate-500 mt-2">Tip: provide a custom short code (6–20 alnum) or leave blank to auto-generate.</p>
+        </div>
       </form>
-      <div id="createMsg" class="mt-2 text-sm text-red-600"></div>
     </section>
 
-    <section class="bg-white p-4 rounded shadow">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-xl font-semibold">All Links</h2>
-        <input id="search" placeholder="Filter by code or URL" class="p-2 border rounded w-64" />
+    <!-- TABLE CARD -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-2xl font-semibold text-slate-800">All Links</h2>
+          <p class="text-sm text-slate-500">Short links stored in your database (most recent first).</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input id="search" placeholder="Filter by code or URL" class="px-3 py-2 rounded-md border bg-white" />
+          <button id="refreshBtn" class="px-4 py-2 border rounded-md bg-white">Refresh</button>
+        </div>
       </div>
-      <div id="tableWrap" class="overflow-auto">
-        <table class="min-w-full text-left">
-          <thead class="text-sm text-gray-600">
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+          <thead class="bg-slate-50">
             <tr>
-              <th class="p-2">Short</th>
-              <th class="p-2">Target URL</th>
-              <th class="p-2">Clicks</th>
-              <th class="p-2">Last clicked</th>
-              <th class="p-2">Actions</th>
+              <th class="text-left p-3">Short</th>
+              <th class="text-left p-3">Target URL</th>
+              <th class="text-left p-3">Clicks</th>
+              <th class="text-left p-3">Last clicked</th>
+              <th class="text-left p-3">Actions</th>
             </tr>
           </thead>
-          <tbody id="linksBody" class="bg-white"></tbody>
+          <tbody id="linksBody" class="divide-y"></tbody>
         </table>
       </div>
+
+      <div id="emptyNote" class="py-6 text-center text-slate-500">No results? Create a new short link above.</div>
     </section>
+
+    <footer>
+      Made with ❤️ — TinyLink
+    </footer>
   </div>
 
+  <!-- Keep script reference to your existing frontend JS -->
   <script src="app.js"></script>
 </body>
 </html>
