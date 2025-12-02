@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>All Links — Dashboard</title>
+  <title>TinyLink — Dashboard</title>
 
   <!-- Tailwind CDN (quick) -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -76,36 +76,12 @@
     <header class="flex items-start justify-between mb-6">
       <div>
         <h1 class="text-4xl font-extrabold text-slate-900">TinyLink — All Links Dashboard</h1>
-        <p class="mt-2 text-slate-600">Create short links, view stats, and manage links with analytics.</p>
+        
       </div>
 
     </header>
 
-    <!-- CREATE FORM CARD -->
-    <section class="card mb-6">
-      <form id="createForm" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-        <div class="md:col-span-7">
-          <label class="block text-sm text-slate-600 mb-2">Target URL</label>
-          <input id="target_url" type="url" placeholder="https://example.com/long-url" class="w-full" />
-        </div>
-
-        <div class="md:col-span-3">
-          <label class="block text-sm text-slate-600 mb-2">Optional code</label>
-          <input id="custom_code" type="text" placeholder="6–30 alphanumeric" class="w-full" />
-        </div>
-
-        <div class="md:col-span-2 flex gap-3">
-          <button id="createBtn" class="btn-accent px-6 py-3 rounded-md">Create</button>
-          <button id="clearBtn" type="button" class="px-4 py-3 border rounded-md bg-white">Clear</button>
-        </div>
-
-        <div class="md:col-span-12 mt-2">
-          <div id="createMsg" class="text-sm"></div>
-          <p class="text-xs text-slate-500 mt-2">Tip: provide a custom short code (6–30 alnum) or leave blank to auto-generate.</p>
-        </div>
-      </form>
-    </section>
-
+    
     <!-- TABLE CARD -->
     <section class="card">
       <div class="flex items-center justify-between mb-4">
@@ -137,6 +113,33 @@
 
       <div id="emptyNote" class="py-6 text-center text-slate-500">No results? Create a new short link above.</div>
     </section>
+
+    <!-- CREATE FORM CARD -->
+    <section class="card mb-6">
+      <p class="mt-2 text-slate-600">Create short links, view stats, and manage links with analytics.</p>
+      <form id="createForm" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        <div class="md:col-span-7">
+          <label class="block text-sm text-slate-600 mb-2">Target URL</label>
+          <input id="target_url" type="url" placeholder="https://example.com/long-url" class="w-full" />
+        </div>
+
+        <div class="md:col-span-3">
+          <label class="block text-sm text-slate-600 mb-2">Optional code</label>
+          <input id="custom_code" type="text" placeholder="6–30 alphanumeric" class="w-full" />
+        </div>
+
+        <div class="md:col-span-2 flex gap-3">
+          <button id="createBtn" class="btn-accent px-6 py-3 rounded-md">Create</button>
+          <button id="clearBtn" type="button" class="px-4 py-3 border rounded-md bg-white">Clear</button>
+        </div>
+
+        <div class="md:col-span-12 mt-2">
+          <div id="createMsg" class="text-sm"></div>
+          <p class="text-xs text-slate-500 mt-2">Tip: provide a custom short code (6–30 alnum) or leave blank to auto-generate.</p>
+        </div>
+      </form>
+    </section>
+
 
     <footer>
       Made with ❤️ — TinyLink
